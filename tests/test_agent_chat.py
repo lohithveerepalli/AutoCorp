@@ -95,3 +95,35 @@ def test_quick_action_chips_present() -> None:
 def test_model_for_agent_uses_config(chat: AgentChatService) -> None:
     mid = chat.model_for_agent("brain")
     assert isinstance(mid, str) and len(mid) > 0
+
+
+def test_list_messages_returns_latest_n(chat: AgentChatService, project: Project) -> None:
+    for i in range(5):
+        chat.append_message(project.id, "brain", "user", f"msg-{i}")
+    latest = chat.list_messages(project.id, "brain", limit=3)
+    assert len(latest) == 3
+    assert [m.content for m in latest] == ["msg-2", "msg-3", "msg-4"]
+
+
+def test_apply_quick_action_persists_chip_prompt(
+    chat: AgentChatService, project: Project, tmp_path: Path
+) -> None:
+    brain = SharedBrain(tmp_path / "brain_chip.db")
+
+    def stub(agent, proj, history, text, on_token=None):
+        return f"ok:{text[:40]}"
+
+    for chip in QUICK_ACTION_CHIPS:
+        chat.clear_thread(project.id, "accountant")
+        user_msg, agent_msg = chat.apply_quick_action(
+            project.id,
+            "accountant",
+            chip["id"],
+            brain=brain,
+            reply_fn=stub,
+        )
+        assert user_msg.content == chip["prompt"]
+        assert user_msg.role == "user"
+        assert agent_msg.role == "agent"
+        loaded = chat.list_messages(project.id, "accountant")
+        assert loaded[0].content == chip["prompt"]

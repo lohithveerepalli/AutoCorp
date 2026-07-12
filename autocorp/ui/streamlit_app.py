@@ -491,9 +491,19 @@ def page_talk_to_agents() -> None:
         st.subheader("Team")
         if "chat_agent" not in st.session_state:
             st.session_state.chat_agent = "brain"
+        statuses = {
+            s.agent.value: s for s in brain().get_agent_statuses(project.id)
+        }
         for role in AGENT_ROLES:
             color = agent_color(role)
             model = chat_service().model_for_agent(role)
+            st_obj = statuses.get(role)
+            task = (st_obj.current_task if st_obj else "") or "Idle"
+            status = (
+                st_obj.status.value
+                if st_obj and hasattr(st_obj.status, "value")
+                else (st_obj.status if st_obj else "idle")
+            )
             active = st.session_state.chat_agent == role
             border = f"2px solid {color}" if active else "1px solid var(--ac-border)"
             st.markdown(
@@ -501,6 +511,7 @@ def page_talk_to_agents() -> None:
                 <div class="ac-agent-card" style="border:{border};border-left:3px solid {color}">
                   <div class="ac-badge" style="color:{color}"><span class="orb"></span>{AGENT_LABELS[role]}</div>
                   <div style="font-size:0.78rem;color:var(--ac-text-muted);margin-top:0.35rem">{AGENT_BLURBS[role]}</div>
+                  <div style="font-size:0.72rem;margin-top:0.35rem;color:var(--ac-text-muted)">{html.escape(str(status))} · {html.escape(str(task)[:80])}</div>
                   <div style="font-size:0.72rem;margin-top:0.4rem;font-family:ui-monospace,monospace">{html.escape(model)}</div>
                 </div>
                 """,
@@ -543,12 +554,23 @@ def page_talk_to_agents() -> None:
                 use_container_width=True,
             )
 
-        # Quick action chips
+        # Quick action chips — auto-send via service (not text_area value=)
         st.write("Quick actions")
         chip_cols = st.columns(len(QUICK_ACTION_CHIPS))
         for i, chip in enumerate(QUICK_ACTION_CHIPS):
             if chip_cols[i].button(chip["label"], key=f"chip_{agent}_{chip['id']}"):
-                st.session_state.pending_chat_send = chip["prompt"]
+                sk = st.empty()
+                with sk.container():
+                    skeleton(2)
+                with st.spinner(f"{AGENT_LABELS[agent]} is on it…"):
+                    chat_service().apply_quick_action(
+                        project.id,
+                        agent,
+                        chip["id"],
+                        brain=brain(),
+                    )
+                sk.empty()
+                toast(f"{chip['label']} → {AGENT_LABELS[agent]}")
                 st.rerun()
 
         # Message history bubbles
@@ -576,13 +598,11 @@ def page_talk_to_agents() -> None:
                         unsafe_allow_html=True,
                     )
 
-        # Composer
-        pending = st.session_state.pop("pending_chat_send", None)
-        default_val = pending or ""
-        with st.form(f"chat_form_{agent}", clear_on_submit=True):
+        # Composer — no sticky value= hacks; form remounts cleanly on agent change
+        form_key = f"chat_form_{agent}_{st.session_state.get('chat_form_nonce', 0)}"
+        with st.form(form_key, clear_on_submit=True):
             user_text = st.text_area(
                 "Message",
-                value=default_val,
                 placeholder=f"Message {AGENT_LABELS[agent]}…",
                 height=100,
                 label_visibility="collapsed",
@@ -615,6 +635,7 @@ def page_talk_to_agents() -> None:
                     on_token=on_token,
                 )
             sk.empty()
+            st.session_state.chat_form_nonce = int(st.session_state.get("chat_form_nonce", 0)) + 1
             toast(f"Reply from {AGENT_LABELS[agent]}")
             st.rerun()
         elif send:

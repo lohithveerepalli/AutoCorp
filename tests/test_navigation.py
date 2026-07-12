@@ -129,5 +129,16 @@ def test_set_active_company_and_sync() -> None:
     assert session["company_select"] == "new-co"
     sync_company_select_from_active_slug(session, ["old-co", "new-co", "third"])
     assert session["company_select"] == "new-co"
-    read_company_selection(session["company_select"], session)
+    # After "widget mount", only logical keys may be written
+    widget_value = session["company_select"]
+    read_company_selection(widget_value, session)
     assert session["active_slug"] == "new-co"
+    # Must NOT rewrite widget key post-read (Streamlit forbids this)
+    assert session["company_select"] == widget_value
+
+
+def test_read_company_selection_never_writes_widget_key() -> None:
+    session = {"company_select": "sticky-widget-value", "active_slug": "old"}
+    read_company_selection("user-picked-slug", session)
+    assert session["active_slug"] == "user-picked-slug"
+    assert session["company_select"] == "sticky-widget-value"  # untouched

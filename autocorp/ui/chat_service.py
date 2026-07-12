@@ -83,16 +83,20 @@ class AgentChatService:
                 conn.close()
 
     def list_messages(self, project_id: str, agent: str, limit: int = 500) -> list[ChatMessage]:
+        """Return the latest `limit` messages in chronological order (oldest→newest)."""
         agent = agent.lower()
         with self._lock:
             conn = self._connect()
             try:
                 cur = conn.execute(
                     """
-                    SELECT * FROM agent_chats
-                    WHERE project_id = ? AND agent = ?
+                    SELECT * FROM (
+                        SELECT * FROM agent_chats
+                        WHERE project_id = ? AND agent = ?
+                        ORDER BY created_at DESC
+                        LIMIT ?
+                    ) AS recent
                     ORDER BY created_at ASC
-                    LIMIT ?
                     """,
                     (project_id, agent, limit),
                 )
@@ -327,6 +331,32 @@ class AgentChatService:
             if c["id"] == chip_id:
                 return c["prompt"]
         return None
+
+    def apply_quick_action(
+        self,
+        project_id: str,
+        agent: str,
+        chip_id: str,
+        *,
+        brain: SharedBrain | None = None,
+        reply_fn: Callable[..., str] | None = None,
+        on_token: Callable[[str], None] | None = None,
+    ) -> tuple[ChatMessage, ChatMessage]:
+        """Resolve a chip id to its prompt and send as a CEO message (auto-send).
+
+        Independent of Streamlit text_area widget state — chips always persist.
+        """
+        prompt = self.chip_prompt(chip_id)
+        if not prompt:
+            raise ValueError(f"Unknown quick-action chip: {chip_id}")
+        return self.send_user_message(
+            project_id,
+            agent,
+            prompt,
+            brain=brain,
+            reply_fn=reply_fn,
+            on_token=on_token,
+        )
 
     @staticmethod
     def _row(r: sqlite3.Row) -> ChatMessage:
