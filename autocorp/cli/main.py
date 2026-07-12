@@ -360,5 +360,45 @@ def config_cmd(
     )
 
 
+@app.command("ui")
+def ui_cmd(
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind host"),
+    port: int = typer.Option(8787, "--port", "-p", help="Bind port"),
+    open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser"),
+) -> None:
+    """Start the AutoCorp Web UI (CEO control plane in the browser)."""
+    import webbrowser
+
+    import uvicorn
+
+    console = get_console()
+    banner()
+    url = f"http://{host}:{port}"
+    console.print(f"[bold cyan]Web UI[/bold cyan] → [link={url}]{url}[/link]")
+    console.print("[dim]Setup · Launch · Dashboard · Approvals · Company detail[/dim]\n")
+    if open_browser:
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
+    uvicorn.run(
+        "autocorp.web.app:app",
+        host=host,
+        port=port,
+        reload=False,
+        log_level="info",
+    )
+
+
+@app.command("serve")
+def serve_cmd(
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8787, "--port", "-p"),
+    open_browser: bool = typer.Option(True, "--open/--no-open"),
+) -> None:
+    """Alias for `autocorp ui` — start the Web UI server."""
+    ui_cmd(host=host, port=port, open_browser=open_browser)
+
+
 if __name__ == "__main__":
     app()

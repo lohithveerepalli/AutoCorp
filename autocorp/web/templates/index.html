@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoCorp — AI Company OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/app.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">AC</div>
+        <div>
+          <h1>AutoCorp</h1>
+          <p>AI Company OS</p>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav">
+        <button class="nav-btn active" data-page="dashboard"><span class="dot"></span>Dashboard</button>
+        <button class="nav-btn" data-page="launch"><span class="dot"></span>Launch company</button>
+        <button class="nav-btn" data-page="setup"><span class="dot"></span>Setup & models</button>
+        <button class="nav-btn" data-page="approvals"><span class="dot"></span>Approvals</button>
+        <button class="nav-btn" data-page="company"><span class="dot"></span>Company detail</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <strong id="meta-version">AutoCorp</strong>
+        <span id="meta-setup">Loading…</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- DASHBOARD -->
+      <section class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <h2>Command center</h2>
+            <p>Monitor companies, budgets, and agent activity. The CEO only approves money and irreversible actions.</p>
+          </div>
+          <button class="btn btn-primary" data-goto="launch">Launch company</button>
+        </div>
+
+        <div class="grid-4" id="dash-stats">
+          <div class="stat"><div class="label">Companies</div><div class="value" id="stat-companies">—</div></div>
+          <div class="stat"><div class="label">Pending approvals</div><div class="value warn" id="stat-approvals">—</div></div>
+          <div class="stat"><div class="label">Total spent</div><div class="value money" id="stat-spent">—</div></div>
+          <div class="stat"><div class="label">Est. monthly LLM</div><div class="value" id="stat-llm">—</div></div>
+        </div>
+
+        <div class="card mt-2">
+          <h3>Your companies</h3>
+          <div id="company-list" class="company-list">
+            <div class="empty">Loading companies…</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LAUNCH -->
+      <section class="page" id="page-launch">
+        <div class="page-header">
+          <div>
+            <h2>Launch a company</h2>
+            <p>Describe the company once. Brain, Operator, Marketer, and Accountant take over end-to-end.</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card launch-hero">
+            <h3>CEO brief</h3>
+            <p class="subtitle">Same vision format as the CLI — now in the browser.</p>
+            <form id="launch-form" class="form-grid">
+              <div class="field">
+                <label for="launch-name">Company name</label>
+                <input id="launch-name" name="name" placeholder="FocusFlow" required value="FocusFlow" />
+              </div>
+              <div class="field">
+                <label for="launch-desc">Description</label>
+                <textarea id="launch-desc" name="description" required>AI Pomodoro + deep work tracker for freelancers</textarea>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="launch-budget">Budget (USD)</label>
+                  <input id="launch-budget" type="number" min="1" step="1" value="450" />
+                </div>
+                <div class="field">
+                  <label for="launch-cycles">Autonomous cycles</label>
+                  <input id="launch-cycles" type="number" min="1" max="20" value="3" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="launch-stack">Stack preference</label>
+                <input id="launch-stack" value="Next.js + Supabase + Stripe + Vercel" />
+              </div>
+              <div class="field">
+                <label for="launch-tone">Tone</label>
+                <input id="launch-tone" value="clean, professional" />
+              </div>
+              <label class="checkbox">
+                <input type="checkbox" id="launch-auto" checked />
+                Demo mode: auto-approve money & socials (recommended for first test)
+              </label>
+              <div class="btn-row">
+                <button type="submit" class="btn btn-primary" id="launch-btn">
+                  Launch company
+                </button>
+              </div>
+            </form>
+            <div id="launch-status" class="mt-1 muted hidden"></div>
+          </div>
+
+          <div class="card">
+            <h3>What happens next</h3>
+            <div class="message-feed" style="max-height:none">
+              <div class="msg">
+                <div class="meta"><span class="from accountant">Accountant</span> yellow</div>
+                <div class="subject">Open books + Stripe</div>
+                <div class="body">Budget rails, P&L, spend approvals.</div>
+              </div>
+              <div class="msg">
+                <div class="meta"><span class="from operator">Operator</span> green</div>
+                <div class="subject">Domains + email</div>
+                <div class="body">Multi-registrar price compare, purchase, team inboxes.</div>
+              </div>
+              <div class="msg">
+                <div class="meta"><span class="from brain">Brain</span> blue</div>
+                <div class="subject">Code → GitHub → Supabase → Vercel</div>
+                <div class="body">Full product ownership and production deploy.</div>
+              </div>
+              <div class="msg">
+                <div class="meta"><span class="from marketer">Marketer</span> magenta</div>
+                <div class="subject">Brand + social + content</div>
+                <div class="body">Accounts, launch posts, growth loops (approval gated).</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETUP -->
+      <section class="page" id="page-setup">
+        <div class="page-header">
+          <div>
+            <h2>Setup & models</h2>
+            <p>Choose models/APIs for each agent, review estimated monthly costs, set budget alerts, and save.</p>
+          </div>
+          <button class="btn btn-primary" id="save-config-btn">Save configuration</button>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Agent models</h3>
+            <p class="subtitle">Claude · GPT-4o · o1 · DeepSeek · OpenRouter · Ollama (local)</p>
+            <div class="agent-models" id="agent-models">
+              <!-- filled by JS -->
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <h3>Estimated monthly LLM cost</h3>
+              <p class="subtitle">Updates live as you change models</p>
+              <table class="cost-table" id="cost-table">
+                <thead>
+                  <tr>
+                    <th>Usage</th>
+                    <th class="num">Companies</th>
+                    <th class="num">Brain</th>
+                    <th class="num">Ops</th>
+                    <th class="num">Mkt</th>
+                    <th class="num">Acct</th>
+                    <th class="num">Total</th>
+                  </tr>
+                </thead>
+                <tbody id="cost-body"></tbody>
+              </table>
+            </div>
+
+            <div class="card mt-1">
+              <h3>Budgets & alerts</h3>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="cfg-profile">Default usage profile</label>
+                  <select id="cfg-profile">
+                    <option value="light">Light (1 company / month)</option>
+                    <option value="medium" selected>Medium (3 companies / month)</option>
+                    <option value="heavy">Heavy (10 companies / month)</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="cfg-alert">Monthly LLM alert (USD)</label>
+                    <input id="cfg-alert" type="number" min="0" step="1" value="50" />
+                  </div>
+                  <div class="field">
+                    <label for="cfg-budget">Default company budget (USD)</label>
+                    <input id="cfg-budget" type="number" min="1" step="1" value="500" />
+                  </div>
+                </div>
+                <label class="checkbox">
+                  <input type="checkbox" id="cfg-approval" checked />
+                  Require human approval for money & irreversible actions
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- APPROVALS -->
+      <section class="page" id="page-approvals">
+        <div class="page-header">
+          <div>
+            <h2>Approvals</h2>
+            <p>Money and irreversible actions wait here for the human CEO.</p>
+          </div>
+          <button class="btn btn-secondary" id="refresh-approvals">Refresh</button>
+        </div>
+        <div class="card" id="approvals-list">
+          <div class="empty">No pending approvals.</div>
+        </div>
+      </section>
+
+      <!-- COMPANY DETAIL -->
+      <section class="page" id="page-company">
+        <div class="page-header">
+          <div>
+            <h2 id="co-name">Company</h2>
+            <p id="co-desc" class="muted">Select a company from the dashboard.</p>
+          </div>
+          <div class="btn-row" style="margin:0">
+            <button class="btn btn-secondary btn-sm" id="co-refresh">Refresh</button>
+            <button class="btn btn-primary btn-sm" id="co-run">Run +2 cycles</button>
+          </div>
+        </div>
+
+        <div id="company-empty" class="empty">No company selected yet. Launch one or pick from Dashboard.</div>
+        <div id="company-body" class="hidden">
+          <div class="grid-4">
+            <div class="stat"><div class="label">Status</div><div class="value" id="co-status">—</div></div>
+            <div class="stat"><div class="label">Budget remaining</div><div class="value money" id="co-remaining">—</div></div>
+            <div class="stat"><div class="label">Domain</div><div class="value" style="font-size:1rem" id="co-domain">—</div></div>
+            <div class="stat"><div class="label">Vercel</div><div class="value" style="font-size:0.85rem" id="co-vercel">—</div></div>
+          </div>
+
+          <div class="card mt-1">
+            <h3>Budget utilization</h3>
+            <div class="muted mono" id="co-budget-text">—</div>
+            <div class="progress-bar"><span id="co-budget-bar" style="width:0%"></span></div>
+          </div>
+
+          <div class="card mt-1">
+            <h3>Agents</h3>
+            <div class="agent-grid" id="co-agents"></div>
+          </div>
+
+          <div class="grid-2 mt-1">
+            <div class="card">
+              <h3>Message bus</h3>
+              <div class="message-feed" id="co-messages"></div>
+            </div>
+            <div class="card">
+              <h3>P&L line items</h3>
+              <div id="co-costs"></div>
+              <h3 class="mt-2">Emails & socials</h3>
+              <div id="co-assets" class="muted" style="font-size:0.88rem"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

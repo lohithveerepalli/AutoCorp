@@ -40,10 +40,12 @@ pip install -e ".[dev]"
 cp .env.example .env
 # Add at least ANTHROPIC_API_KEY and/or OPENAI_API_KEY
 
-# Interactive setup: models, monthly cost estimates, budget alerts
-autocorp setup
+# Web UI (recommended) — setup, launch, dashboard, approvals
+autocorp ui
+# → http://127.0.0.1:8787
 
-# Launch a company
+# Or CLI setup + launch
+autocorp setup
 autocorp launch "FocusFlow" \
   --budget 450 \
   --desc "AI Pomodoro + deep work tracker for freelancers"
@@ -52,6 +54,21 @@ autocorp launch "FocusFlow" \
 autocorp launch "FocusFlow" --budget 450 \
   --desc "AI Pomodoro + deep work tracker for freelancers" \
   --auto-approve --yes --cycles 3
+```
+
+### Web UI
+
+| Page | What it does |
+|------|----------------|
+| **Dashboard** | Companies, spend, pending approvals, LLM cost estimate |
+| **Launch company** | CEO brief → agents run end-to-end |
+| **Setup & models** | Per-agent models, live monthly cost table, budget alerts, save |
+| **Approvals** | Approve/reject money & irreversible actions |
+| **Company detail** | Agents, message bus, P&L, emails, socials, run more cycles |
+
+```bash
+autocorp ui                 # http://127.0.0.1:8787
+autocorp serve --port 8787  # alias
 ```
 
 ---
