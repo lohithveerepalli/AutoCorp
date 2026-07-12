@@ -363,41 +363,88 @@ def config_cmd(
 @app.command("ui")
 def ui_cmd(
     host: str = typer.Option("127.0.0.1", "--host", help="Bind host"),
-    port: int = typer.Option(8787, "--port", "-p", help="Bind port"),
+    port: int = typer.Option(8501, "--port", "-p", help="Bind port"),
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser"),
+    legacy_fastapi: bool = typer.Option(
+        False,
+        "--legacy-fastapi",
+        help="Start the older FastAPI HTML SPA instead of Streamlit",
+    ),
 ) -> None:
-    """Start the AutoCorp Web UI (CEO control plane in the browser)."""
+    """Start the AutoCorp Streamlit CEO dashboard (premium SaaS UI)."""
+    import subprocess
+    import sys
     import webbrowser
-
-    import uvicorn
+    from pathlib import Path
 
     console = get_console()
     banner()
+
+    if legacy_fastapi:
+        import uvicorn
+
+        url = f"http://{host}:{port if port != 8501 else 8787}"
+        console.print(f"[bold cyan]Legacy FastAPI UI[/bold cyan] → {url}")
+        if open_browser:
+            try:
+                webbrowser.open(url)
+            except Exception:
+                pass
+        uvicorn.run(
+            "autocorp.web.app:app",
+            host=host,
+            port=port if port != 8501 else 8787,
+            reload=False,
+            log_level="info",
+        )
+        return
+
+    app_path = Path(__file__).resolve().parents[1] / "ui" / "streamlit_app.py"
     url = f"http://{host}:{port}"
-    console.print(f"[bold cyan]Web UI[/bold cyan] → [link={url}]{url}[/link]")
-    console.print("[dim]Setup · Launch · Dashboard · Approvals · Company detail[/dim]\n")
+    console.print(f"[bold cyan]Streamlit Web UI[/bold cyan] → [link={url}]{url}[/link]")
+    console.print(
+        "[dim]Dashboard · Launch · Companies · Talk to Agents · Approvals · Settings[/dim]\n"
+    )
     if open_browser:
         try:
             webbrowser.open(url)
         except Exception:
             pass
-    uvicorn.run(
-        "autocorp.web.app:app",
-        host=host,
-        port=port,
-        reload=False,
-        log_level="info",
-    )
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        str(app_path),
+        "--server.address",
+        host,
+        "--server.port",
+        str(port),
+        "--browser.gatherUsageStats",
+        "false",
+    ]
+    # Prefer package-local Streamlit config (dark theme, no usage stats)
+    config_dir = Path(__file__).resolve().parents[1] / "ui" / ".streamlit"
+    env = {**dict(**{k: v for k, v in __import__("os").environ.items()})}
+    if config_dir.is_dir():
+        env["STREAMLIT_CONFIG_DIR"] = str(config_dir)
+    raise SystemExit(subprocess.call(cmd, env=env))
 
 
 @app.command("serve")
 def serve_cmd(
     host: str = typer.Option("127.0.0.1", "--host"),
-    port: int = typer.Option(8787, "--port", "-p"),
+    port: int = typer.Option(8501, "--port", "-p"),
     open_browser: bool = typer.Option(True, "--open/--no-open"),
+    legacy_fastapi: bool = typer.Option(False, "--legacy-fastapi"),
 ) -> None:
-    """Alias for `autocorp ui` — start the Web UI server."""
-    ui_cmd(host=host, port=port, open_browser=open_browser)
+    """Alias for `autocorp ui` — start the Streamlit Web UI."""
+    ui_cmd(
+        host=host,
+        port=port,
+        open_browser=open_browser,
+        legacy_fastapi=legacy_fastapi,
+    )
 
 
 if __name__ == "__main__":

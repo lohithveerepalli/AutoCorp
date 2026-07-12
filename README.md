@@ -58,6 +58,10 @@ autocorp launch "FocusFlow" --budget 450 \
 
 ### Web UI (production-grade CEO dashboard)
 
+**Primary UI is Streamlit** (`autocorp ui` → http://127.0.0.1:8501) with Talk to Agents chat.
+Legacy FastAPI SPA: `autocorp ui --legacy-fastapi`.
+
+
 Premium dark/light SaaS UI (Linear / Vercel / Stripe inspired) on **FastAPI + custom CSS** — not Streamlit — so layout, glassmorphism, and agent color systems are fully controlled.
 
 | Page | What it does |
