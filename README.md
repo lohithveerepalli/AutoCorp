@@ -56,20 +56,27 @@ autocorp launch "FocusFlow" --budget 450 \
   --auto-approve --yes --cycles 3
 ```
 
-### Web UI
+### Web UI (production-grade CEO dashboard)
+
+Premium dark/light SaaS UI (Linear / Vercel / Stripe inspired) on **FastAPI + custom CSS** — not Streamlit — so layout, glassmorphism, and agent color systems are fully controlled.
 
 | Page | What it does |
 |------|----------------|
-| **Dashboard** | Companies, spend, pending approvals, LLM cost estimate |
-| **Launch company** | CEO brief → agents run end-to-end |
-| **Setup & models** | Per-agent models, live monthly cost table, budget alerts, save |
-| **Approvals** | Approve/reject money & irreversible actions |
-| **Company detail** | Agents, message bus, P&L, emails, socials, run more cycles |
+| **Dashboard** | KPI cards, agent status overview, activity feed, quick actions |
+| **Launch company** | CEO brief, budget slider, live LLM cost context, confirm modal |
+| **Companies** | List of all launched companies |
+| **Company detail** | Tabs: Overview · Agents · Messages · P&L · Infra · Approvals · Settings |
+| **Approvals** | Risk badges, option picker, approve / reject |
+| **Settings / Models** | Per-agent models, live monthly cost calculator, budget alerts |
+| **Usage & Costs** | Profile comparison + per-agent cost bars |
+| **Docs / Help** | Getting started + keyboard shortcuts |
 
 ```bash
 autocorp ui                 # http://127.0.0.1:8787
 autocorp serve --port 8787  # alias
 ```
+
+Shortcuts: `1–7` pages · `T` theme · `R` refresh · `L` launch
 
 ---
 
