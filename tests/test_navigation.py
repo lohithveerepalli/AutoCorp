@@ -1,11 +1,15 @@
-"""Real navigation deep-link logic — simulates Streamlit sticky radio."""
+"""Real navigation deep-link logic — simulates Streamlit sticky widgets."""
 
 from autocorp.ui.navigation import (
     apply_nav_destination,
     build_nav_options,
     normalize_nav_choice,
     option_for_page,
+    read_company_selection,
     read_nav_selection,
+    set_active_company,
+    simulate_sidebar_company_pass,
+    sync_company_select_from_active_slug,
     sync_radio_from_nav_page,
 )
 
@@ -74,3 +78,56 @@ def test_agent_card_deep_link_end_to_end() -> None:
 def test_option_for_page_approvals_badge() -> None:
     assert option_for_page("Approvals", 5) == "Approvals (5)"
     assert option_for_page("Approvals", 0) == "Approvals"
+
+
+def test_company_select_sticky_overwrite_bug_is_fixed() -> None:
+    """Set active+chat / Open company must not be clobbered by sticky selectbox."""
+    slugs = ["alpha-co", "beta-co"]
+    session: dict = {
+        "nav_page": "Companies",
+        "nav_radio": "Companies",
+        "active_slug": "alpha-co",
+        "company_select": "alpha-co",
+    }
+
+    # Broken path: only active_slug (historical bug)
+    session["active_slug"] = "beta-co"
+    session["company_detail"] = "beta-co"
+    # Sticky company_select still alpha; sidebar would write active_slug back
+    assert session["company_select"] == "alpha-co"
+    broken = session["company_select"]  # simulate widget return without sync
+    session["active_slug"] = broken
+    assert session["active_slug"] == "alpha-co"  # documents the bug class
+
+    # Fixed path
+    session = {
+        "nav_page": "Companies",
+        "nav_radio": "Companies",
+        "active_slug": "alpha-co",
+        "company_select": "alpha-co",
+    }
+    apply_nav_destination(
+        session,
+        "Talk to Agents",
+        company_slug="beta-co",
+        pending_approvals=0,
+    )
+    assert session["active_slug"] == "beta-co"
+    assert session["company_select"] == "beta-co"
+    assert session["_company_programmatic"] is True
+
+    final = simulate_sidebar_company_pass(session, slugs)
+    assert final == "beta-co"
+    assert session["active_slug"] == "beta-co"
+    assert session["company_select"] == "beta-co"
+    assert session["nav_page"] == "Talk to Agents"
+
+
+def test_set_active_company_and_sync() -> None:
+    session: dict = {"company_select": "old-co", "active_slug": "old-co"}
+    set_active_company(session, "new-co")
+    assert session["company_select"] == "new-co"
+    sync_company_select_from_active_slug(session, ["old-co", "new-co", "third"])
+    assert session["company_select"] == "new-co"
+    read_company_selection(session["company_select"], session)
+    assert session["active_slug"] == "new-co"

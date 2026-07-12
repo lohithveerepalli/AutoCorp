@@ -1,12 +1,13 @@
 """Pure navigation helpers for Streamlit sidebar + deep links.
 
 Streamlit keyed widgets ignore `index` after first mount; programmatic
-navigation must write the widget key (`nav_radio`) as well as `nav_page`.
+navigation must write widget keys (`nav_radio`, `company_select`) as well as
+logical keys (`nav_page`, `active_slug`).
 """
 
 from __future__ import annotations
 
-from typing import Any, MutableMapping
+from typing import Any, MutableMapping, Sequence
 
 from autocorp.ui.design import NAV_PAGES, nav_pages
 
@@ -30,7 +31,6 @@ def normalize_nav_choice(choice: str | None) -> str:
         return "Approvals"
     if choice in NAV_PAGES:
         return choice
-    # Fallback: strip badge
     base = choice.split(" (", 1)[0]
     return base if base in NAV_PAGES else "Dashboard"
 
@@ -51,10 +51,11 @@ def apply_nav_destination(
     pending_approvals: int = 0,
     company_slug: str | None = None,
 ) -> str:
-    """Programmatic navigation: set nav_page + nav_radio + optional chat agent.
+    """Programmatic navigation: sync page + radio + optional company + agent.
 
-    Returns the canonical page name. Sets `_nav_programmatic` so the sidebar
-    can force-sync the sticky radio key before the widget is created.
+    Sets `_nav_programmatic` and, when company_slug is provided,
+    `_company_programmatic` so the sidebar can force-sync sticky widget keys
+    before widgets are created.
     """
     canonical = normalize_nav_choice(page)
     if canonical not in NAV_PAGES:
@@ -65,20 +66,25 @@ def apply_nav_destination(
     if agent is not None:
         session["chat_agent"] = agent
     if company_slug is not None:
-        session["active_slug"] = company_slug
-        session["company_detail"] = company_slug
+        set_active_company(session, company_slug)
     return canonical
+
+
+def set_active_company(session: MutableMapping[str, Any], company_slug: str) -> str:
+    """Programmatically select a company (syncs active_slug + company_select)."""
+    slug = str(company_slug)
+    session["active_slug"] = slug
+    session["company_detail"] = slug
+    session["company_select"] = slug
+    session["_company_programmatic"] = True
+    return slug
 
 
 def sync_radio_from_nav_page(
     session: MutableMapping[str, Any],
     pending_approvals: int = 0,
 ) -> str:
-    """Before rendering st.radio(key='nav_radio'), align sticky key with nav_page.
-
-    If a programmatic navigation just happened, always overwrite nav_radio.
-    Returns the option string that should be selected.
-    """
+    """Before rendering st.radio(key='nav_radio'), align sticky key with nav_page."""
     page = normalize_nav_choice(session.get("nav_page", "Dashboard"))
     desired = option_for_page(page, pending_approvals)
     options = build_nav_options(pending_approvals)
@@ -92,13 +98,59 @@ def sync_radio_from_nav_page(
     elif "nav_radio" not in session:
         session["nav_radio"] = desired
     else:
-        # Keep radio if user clicked it; ensure nav_page follows on read path
         current = session.get("nav_radio")
         if current not in options:
             session["nav_radio"] = desired
 
     session["nav_page"] = page
     return session["nav_radio"]
+
+
+def sync_company_select_from_active_slug(
+    session: MutableMapping[str, Any],
+    slugs: Sequence[str],
+) -> str | None:
+    """Before st.selectbox(key='company_select'), align sticky key with active_slug.
+
+    Returns the slug that should be selected, or None if no companies.
+    """
+    if not slugs:
+        session["active_slug"] = None
+        session.pop("company_select", None)
+        session["_company_programmatic"] = False
+        return None
+
+    desired = session.get("active_slug")
+    if desired not in slugs:
+        desired = slugs[0]
+        session["active_slug"] = desired
+
+    if session.get("_company_programmatic"):
+        session["company_select"] = desired
+        session["_company_programmatic"] = False
+    elif session.get("company_select") not in slugs:
+        session["company_select"] = desired
+    elif "company_select" not in session:
+        session["company_select"] = desired
+
+    # After programmatic force, company_select matches active_slug.
+    # After user click, company_select is source of truth (read after widget).
+    return session.get("company_select") if session.get("company_select") in slugs else desired
+
+
+def read_company_selection(
+    choice: str | None,
+    session: MutableMapping[str, Any] | None = None,
+) -> str | None:
+    """After selectbox returns, write active_slug from the sticky widget value."""
+    if choice is None:
+        if session is not None:
+            session["active_slug"] = None
+        return None
+    if session is not None:
+        session["active_slug"] = choice
+        session["company_select"] = choice
+    return choice
 
 
 def read_nav_selection(
@@ -110,3 +162,16 @@ def read_nav_selection(
     if session is not None:
         session["nav_page"] = page
     return page
+
+
+def simulate_sidebar_company_pass(
+    session: MutableMapping[str, Any],
+    slugs: Sequence[str],
+) -> str | None:
+    """Test helper: full sticky selectbox cycle (sync → widget → write active_slug)."""
+    sync_company_select_from_active_slug(session, slugs)
+    # Widget returns sticky company_select
+    choice = session.get("company_select")
+    if choice not in slugs:
+        choice = slugs[0] if slugs else None
+    return read_company_selection(choice, session)

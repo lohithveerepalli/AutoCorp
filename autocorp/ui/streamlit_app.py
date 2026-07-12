@@ -43,7 +43,10 @@ from autocorp.ui.design import (
 from autocorp.ui.navigation import (
     apply_nav_destination,
     build_nav_options,
+    read_company_selection,
     read_nav_selection,
+    set_active_company,
+    sync_company_select_from_active_slug,
     sync_radio_from_nav_page,
 )
 from autocorp.ui.theme import (
@@ -182,18 +185,18 @@ def render_sidebar() -> str:
         companies = brain().list_projects()
         slugs = [c.slug for c in companies]
         if slugs:
+            # Critical: sync sticky company_select BEFORE selectbox (deep links)
+            sync_company_select_from_active_slug(st.session_state, slugs)
             sel = st.selectbox(
                 "Active company",
                 slugs,
-                index=slugs.index(st.session_state["active_slug"])
-                if st.session_state.get("active_slug") in slugs
-                else 0,
                 key="company_select",
             )
-            st.session_state.active_slug = sel
+            read_company_selection(sel, st.session_state)
         else:
             st.caption("No companies yet — launch one.")
             st.session_state.active_slug = None
+            st.session_state.pop("company_select", None)
 
         st.divider()
         col_a, col_b = st.columns(2)
@@ -368,7 +371,7 @@ def page_launch() -> None:
         skeleton_slot.empty()
         toast(f"Launched {name}")
         if project.get("slug"):
-            st.session_state.active_slug = project["slug"]
+            set_active_company(st.session_state, project["slug"])
         st.success(
             f"Live · domain {project.get('domain') or 'pending'} · "
             f"{project.get('vercel_url') or '—'}"
