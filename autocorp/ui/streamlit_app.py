@@ -8,6 +8,11 @@ from typing import Any
 
 import streamlit as st
 
+# streamlit-extras (required dependency — used for premium spacing/cards)
+from streamlit_extras.add_vertical_space import add_vertical_space
+from streamlit_extras.colored_header import colored_header
+from streamlit_extras.metric_cards import style_metric_cards
+
 from autocorp import __version__
 from autocorp.core.config import (
     MODEL_CATALOG,
@@ -34,6 +39,12 @@ from autocorp.ui.design import (
     QUICK_ACTION_CHIPS,
     agent_color,
     nav_pages,
+)
+from autocorp.ui.navigation import (
+    apply_nav_destination,
+    build_nav_options,
+    read_nav_selection,
+    sync_radio_from_nav_page,
 )
 from autocorp.ui.theme import (
     get_theme_preference,
@@ -85,11 +96,11 @@ def toast(msg: str, icon: str = "✅") -> None:
         st.success(msg)
 
 
-def skeleton(lines: int = 3) -> None:
-    st.markdown(
-        "".join('<div class="ac-skeleton"></div>' for _ in range(lines)),
-        unsafe_allow_html=True,
-    )
+def skeleton(lines: int = 3) -> str:
+    """Render loading skeleton rows; returns HTML (also injected into the page)."""
+    markup = "".join('<div class="ac-skeleton"></div>' for _ in range(max(1, lines)))
+    st.markdown(markup, unsafe_allow_html=True)
+    return markup
 
 
 def empty_state(title: str, body: str) -> None:
@@ -98,6 +109,27 @@ def empty_state(title: str, body: str) -> None:
         f"<p style='margin:0'>{html.escape(body)}</p></div>",
         unsafe_allow_html=True,
     )
+
+
+def go_to_page(
+    page: str,
+    *,
+    agent: str | None = None,
+    company_slug: str | None = None,
+) -> None:
+    """Deep-link helper: sync nav_page + sticky nav_radio, then rerun."""
+    try:
+        pending_n = len(brain().list_pending_approvals())
+    except Exception:
+        pending_n = 0
+    apply_nav_destination(
+        st.session_state,
+        page,
+        agent=agent,
+        pending_approvals=pending_n,
+        company_slug=company_slug,
+    )
+    st.rerun()
 
 
 def kpi_html(label: str, value: str) -> str:
@@ -129,39 +161,22 @@ def render_sidebar() -> str:
             unsafe_allow_html=True,
         )
 
-        # pending badge count
         try:
             pending_n = len(brain().list_pending_approvals())
         except Exception:
             pending_n = 0
 
-        labels = nav_pages()
-        # Build radio options with badge text for Approvals
-        options = []
-        for lab in labels:
-            if lab == "Approvals" and pending_n:
-                options.append(f"Approvals ({pending_n})")
-            else:
-                options.append(lab)
-
-        current = st.session_state.get("nav_page", "Dashboard")
-        # Map back if badge form
-        default_idx = 0
-        for i, lab in enumerate(labels):
-            if current == lab or (lab == "Approvals" and current.startswith("Approvals")):
-                default_idx = i
-                break
+        options = build_nav_options(pending_n)
+        # Critical: sync sticky radio key BEFORE widget create (deep links)
+        sync_radio_from_nav_page(st.session_state, pending_n)
 
         choice = st.radio(
             "Navigation",
             options,
-            index=default_idx,
             label_visibility="collapsed",
             key="nav_radio",
         )
-        # Normalize
-        page = choice.split(" (")[0] if choice.startswith("Approvals") else choice
-        st.session_state.nav_page = page
+        page = read_nav_selection(choice, st.session_state)
 
         st.divider()
         companies = brain().list_projects()
@@ -192,6 +207,7 @@ def render_sidebar() -> str:
             st.caption(f"Theme: **{theme}**")
 
         st.caption("Talk to Agents = CEO direct line")
+        add_vertical_space(1)
     return page
 
 
@@ -206,8 +222,15 @@ def resolve_project():
 
 
 def page_dashboard() -> None:
-    st.title("Dashboard")
-    st.caption("Command center for your autonomous company fleet")
+    colored_header(
+        label="Dashboard",
+        description="Command center for your autonomous company fleet",
+        color_name="green-70",
+    )
+
+    # Brief skeleton while first paint loads data (visible loading affordance)
+    if st.session_state.pop("_show_dash_skeleton", False):
+        skeleton(4)
 
     projects = brain().list_projects()
     pending = brain().list_pending_approvals()
@@ -220,10 +243,16 @@ def page_dashboard() -> None:
         llm_cost = "—"
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.markdown(kpi_html("Active companies", str(len(projects))), unsafe_allow_html=True)
-    c2.markdown(kpi_html("Spend", money(spent)), unsafe_allow_html=True)
-    c3.markdown(kpi_html("Pending approvals", str(len(pending))), unsafe_allow_html=True)
-    c4.markdown(kpi_html("Est. monthly LLM", llm_cost), unsafe_allow_html=True)
+    c1.metric("Active companies", str(len(projects)))
+    c2.metric("Spend", money(spent))
+    c3.metric("Pending approvals", str(len(pending)))
+    c4.metric("Est. monthly LLM", llm_cost)
+    style_metric_cards(
+        background_color="rgba(15,23,42,0.55)",
+        border_left_color="#10B981",
+        border_color="rgba(148,163,184,0.12)",
+        box_shadow="0 8px 24px rgba(0,0,0,0.25)",
+    )
 
     st.subheader("Agent status")
     st.caption("Click an agent to open Talk to Agents")
@@ -249,9 +278,7 @@ def page_dashboard() -> None:
                 unsafe_allow_html=True,
             )
             if st.button(f"Chat with {AGENT_LABELS[role]}", key=f"dash_chat_{role}", use_container_width=True):
-                st.session_state.nav_page = "Talk to Agents"
-                st.session_state.chat_agent = role
-                st.rerun()
+                go_to_page("Talk to Agents", agent=role)
 
     st.subheader("Recent activity")
     if not project:
@@ -285,10 +312,7 @@ def page_dashboard() -> None:
                 f"**{p.name}** · `{p.status}` · {money(p.spent_usd)}/{money(p.budget_usd)} · {p.domain or 'no domain'}"
             )
             if cols[1].button("Open", key=f"open_{p.id}"):
-                st.session_state.active_slug = p.slug
-                st.session_state.nav_page = "Companies"
-                st.session_state.company_detail = p.slug
-                st.rerun()
+                go_to_page("Companies", company_slug=p.slug)
 
 
 def page_launch() -> None:
@@ -319,6 +343,10 @@ def page_launch() -> None:
         if not name.strip():
             st.error("Company name required")
             return
+        skeleton_slot = st.empty()
+        with skeleton_slot.container():
+            st.caption("Provisioning agents…")
+            skeleton(5)
         with st.spinner("Launching autonomous agents…"):
             brief = CompanyBrief(
                 name=name.strip(),
@@ -337,13 +365,14 @@ def page_launch() -> None:
                 }
             result = launch_company(brief, max_cycles=int(cycles), context=context)
             project = result.get("project") or {}
-            toast(f"Launched {name}")
-            if project.get("slug"):
-                st.session_state.active_slug = project["slug"]
-            st.success(
-                f"Live · domain {project.get('domain') or 'pending'} · "
-                f"{project.get('vercel_url') or '—'}"
-            )
+        skeleton_slot.empty()
+        toast(f"Launched {name}")
+        if project.get("slug"):
+            st.session_state.active_slug = project["slug"]
+        st.success(
+            f"Live · domain {project.get('domain') or 'pending'} · "
+            f"{project.get('vercel_url') or '—'}"
+        )
 
 
 def page_companies() -> None:
@@ -373,10 +402,11 @@ def page_companies() -> None:
                 pct = (p.spent_usd / p.budget_usd * 100) if p.budget_usd else 0
                 st.progress(min(1.0, pct / 100.0), text=f"Budget utilization {pct:.1f}%")
                 if st.button("Set active + chat", key=f"act_{p.id}"):
-                    st.session_state.active_slug = p.slug
-                    st.session_state.nav_page = "Talk to Agents"
-                    st.rerun()
+                    go_to_page("Talk to Agents", company_slug=p.slug)
                 if st.button("Run +2 cycles", key=f"run_{p.id}"):
+                    sk = st.empty()
+                    with sk.container():
+                        skeleton(3)
                     with st.spinner("Running…"):
                         continue_company(
                             p.slug,
@@ -387,6 +417,7 @@ def page_companies() -> None:
                                 "approve_social": True,
                             },
                         )
+                    sk.empty()
                     toast("Cycles complete")
                     st.rerun()
 
@@ -557,10 +588,14 @@ def page_talk_to_agents() -> None:
 
         if send and user_text.strip():
             stream_area = st.empty()
+            sk = st.empty()
+            with sk.container():
+                skeleton(2)
             chunks: list[str] = []
 
             def on_token(tok: str) -> None:
                 chunks.append(tok)
+                sk.empty()
                 stream_area.markdown(
                     f"<div class='ac-chat-agent' style='border-left-color:{color}'>"
                     f"<div class='ac-chat-meta'>{AGENT_LABELS[agent]} · streaming…</div>"
@@ -576,6 +611,7 @@ def page_talk_to_agents() -> None:
                     brain=brain(),
                     on_token=on_token,
                 )
+            sk.empty()
             toast(f"Reply from {AGENT_LABELS[agent]}")
             st.rerun()
         elif send:

@@ -74,3 +74,16 @@ def test_cli_ui_points_at_streamlit() -> None:
 def test_streamlit_app_module_importable() -> None:
     assert callable(app_mod.main)
     assert callable(app_mod.page_talk_to_agents)
+    assert callable(app_mod.go_to_page)
+    assert callable(app_mod.skeleton)
+
+
+def test_deep_link_buttons_use_go_to_page_not_bare_nav_page() -> None:
+    """Regression: setting only nav_page breaks sticky nav_radio."""
+    text = (ROOT / "autocorp" / "ui" / "streamlit_app.py").read_text(encoding="utf-8")
+    # Dashboard chat buttons
+    assert 'go_to_page("Talk to Agents", agent=role)' in text
+    # Must not leave the broken pattern near dash chat
+    assert "dash_chat_" in text
+    # Broken pattern should not appear as assignment before rerun for chat
+    assert 'st.session_state.nav_page = "Talk to Agents"' not in text
