@@ -30,7 +30,7 @@ Agents run continuous autonomous loops, message each other over a shared SQLite 
 
 ```bash
 # Python 3.11+
-git clone https://github.com/YOUR_USER/AutoCorp.git
+git clone https://github.com/lohithveerepalli/AutoCorp.git
 cd AutoCorp
 
 python3 -m venv .venv

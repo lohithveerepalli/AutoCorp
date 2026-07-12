@@ -69,9 +69,9 @@ local = [
 autocorp = "autocorp.cli.main:app"
 
 [project.urls]
-Homepage = "https://github.com/autocorp-ai/AutoCorp"
-Repository = "https://github.com/autocorp-ai/AutoCorp"
-Issues = "https://github.com/autocorp-ai/AutoCorp/issues"
+Homepage = "https://github.com/lohithveerepalli/AutoCorp"
+Repository = "https://github.com/lohithveerepalli/AutoCorp"
+Issues = "https://github.com/lohithveerepalli/AutoCorp/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
