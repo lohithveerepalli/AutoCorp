@@ -39,10 +39,29 @@ def test_apptest_renders_without_session_state_exception(seeded_env) -> None:
 
     # Must not raise StreamlitAPIException on company_select after-write
     assert not at.exception, f"AppTest exceptions: {at.exception}"
-    # Main content should render a title (Dashboard default)
-    assert len(at.title) + len(at.markdown) + len(at.header) > 0 or len(at.main) >= 0
-    # Sidebar radio present
-    assert len(at.sidebar.radio) >= 1 or len(at.radio) >= 1
+
+    # Real content assertions (not theater)
+    page_text = " ".join(
+        [
+            *(getattr(t, "value", str(t)) for t in at.title),
+            *(getattr(m, "value", str(m)) for m in at.markdown),
+            *(getattr(c, "value", str(c)) for c in at.caption),
+        ]
+    )
+    # Dashboard header or KPI labels should appear
+    assert (
+        "Dashboard" in page_text
+        or "Active companies" in page_text
+        or "Command center" in page_text
+        or any("Dashboard" in str(x) for x in at)
+    )
+
+    radios = list(at.sidebar.radio) if at.sidebar.radio else list(at.radio)
+    assert len(radios) >= 1
+    # Nav options include Talk to Agents
+    opts = radios[0].options if hasattr(radios[0], "options") else []
+    if opts:
+        assert any("Talk to Agents" in str(o) for o in opts)
 
 
 def test_apptest_programmatic_company_context_survives_sidebar(seeded_env) -> None:

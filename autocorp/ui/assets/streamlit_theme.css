@@ -93,6 +93,9 @@ h1, h2, h3 {
   border-radius: 12px 12px 4px 12px;
   padding: 0.75rem 0.9rem;
   margin: 0.4rem 0 0.4rem 15%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 .ac-chat-agent {
   background: var(--ac-bg-elevated, #0C1220);
@@ -101,11 +104,21 @@ h1, h2, h3 {
   border-radius: 12px 12px 12px 4px;
   padding: 0.75rem 0.9rem;
   margin: 0.4rem 15% 0.4rem 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+.ac-chat-body {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 .ac-chat-meta {
   font-size: 0.72rem;
   color: var(--ac-text-muted, #94A3B8);
   margin-bottom: 0.3rem;
+  white-space: normal;
 }
 
 .ac-empty {

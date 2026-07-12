@@ -25,7 +25,10 @@ def test_skeleton_has_call_sites_in_app() -> None:
     text = Path(app.__file__).read_text(encoding="utf-8")
     # Definition + at least one real call (not just def skeleton)
     assert text.count("skeleton(") >= 4  # def + launch + cycles + chat (+ maybe dash)
-    assert "skeleton(5)" in text or "skeleton(3)" in text or "skeleton(2)" in text
+    assert "skeleton(5)" in text or "skeleton(3)" in text or "skeleton(2)" in text or "skeleton(4)" in text
+    # Dashboard skeleton is gated on a flag that gets set True after first show
+    assert "_dash_skeleton_shown" in text
+    assert "skeleton(4)" in text
 
 
 def test_streamlit_extras_imported_in_app() -> None:

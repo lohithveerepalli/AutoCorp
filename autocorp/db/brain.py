@@ -392,9 +392,18 @@ class SharedBrain:
             cur.execute("UPDATE messages SET read = 1 WHERE id = ?", (message_id,))
 
     def get_thread(self, project_id: str, limit: int = 100) -> list[Message]:
+        """Return the latest `limit` messages in chronological order (oldest→newest)."""
         with self._cursor() as cur:
             cur.execute(
-                "SELECT * FROM messages WHERE project_id = ? ORDER BY created_at ASC LIMIT ?",
+                """
+                SELECT * FROM (
+                    SELECT * FROM messages
+                    WHERE project_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                ) AS recent
+                ORDER BY created_at ASC
+                """,
                 (project_id, limit),
             )
             rows = cur.fetchall()

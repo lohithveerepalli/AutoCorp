@@ -106,6 +106,13 @@ def skeleton(lines: int = 3) -> str:
     return markup
 
 
+def format_chat_html(text: str) -> str:
+    """Escape HTML and preserve newlines for chat bubbles (pre-wrap + explicit breaks)."""
+    escaped = html.escape(text or "")
+    # Explicit <br> helps in hosts that ignore white-space; CSS pre-wrap is belt+suspenders
+    return escaped.replace("\n", "<br>\n")
+
+
 def empty_state(title: str, body: str) -> None:
     st.markdown(
         f'<div class="ac-empty"><h4 style="margin:0 0 0.35rem;color:inherit">{html.escape(title)}</h4>'
@@ -231,9 +238,10 @@ def page_dashboard() -> None:
         color_name="green-70",
     )
 
-    # Brief skeleton while first paint loads data (visible loading affordance)
-    if st.session_state.pop("_show_dash_skeleton", False):
+    # Loading skeleton on first dashboard visit this session (real call path)
+    if not st.session_state.get("_dash_skeleton_shown"):
         skeleton(4)
+        st.session_state._dash_skeleton_shown = True
 
     projects = brain().list_projects()
     pending = brain().list_pending_approvals()
@@ -586,7 +594,7 @@ def page_talk_to_agents() -> None:
                 if m.role == "user":
                     st.markdown(
                         f"<div class='ac-chat-user'><div class='ac-chat-meta'>You · CEO</div>"
-                        f"{html.escape(m.content)}</div>",
+                        f"<div class='ac-chat-body'>{format_chat_html(m.content)}</div></div>",
                         unsafe_allow_html=True,
                     )
                 else:
@@ -594,7 +602,7 @@ def page_talk_to_agents() -> None:
                         f"<div class='ac-chat-agent' style='--agent-color:{color};border-left-color:{color}'>"
                         f"<div class='ac-chat-meta'>{html.escape(AGENT_LABELS[agent])} · "
                         f"{html.escape(m.model or model)}</div>"
-                        f"{html.escape(m.content)}</div>",
+                        f"<div class='ac-chat-body'>{format_chat_html(m.content)}</div></div>",
                         unsafe_allow_html=True,
                     )
 
@@ -622,7 +630,7 @@ def page_talk_to_agents() -> None:
                 stream_area.markdown(
                     f"<div class='ac-chat-agent' style='border-left-color:{color}'>"
                     f"<div class='ac-chat-meta'>{AGENT_LABELS[agent]} · streaming…</div>"
-                    f"{html.escape(''.join(chunks))}</div>",
+                    f"<div class='ac-chat-body'>{format_chat_html(''.join(chunks))}</div></div>",
                     unsafe_allow_html=True,
                 )
 
