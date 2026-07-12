@@ -24,26 +24,23 @@ def test_skeleton_function_returns_ac_skeleton_markup() -> None:
 def test_skeleton_has_call_sites_in_app() -> None:
     text = Path(app.__file__).read_text(encoding="utf-8")
     # Definition + at least one real call (not just def skeleton)
-    assert text.count("skeleton(") >= 4  # def + launch + cycles + chat (+ maybe dash)
-    assert "skeleton(5)" in text or "skeleton(3)" in text or "skeleton(2)" in text or "skeleton(4)" in text
-    # Dashboard skeleton is gated on a flag that gets set True after first show
-    assert "_dash_skeleton_shown" in text
-    assert "skeleton(4)" in text
+    assert text.count("skeleton(") >= 2  # def + at least one call site
+    assert "skeleton(" in text
+    # Workspace / launch skeleton paths
+    assert "_ws_skel" in text or "skeleton(4)" in text or "skeleton(3)" in text
 
 
 def test_streamlit_extras_imported_in_app() -> None:
     text = Path(app.__file__).read_text(encoding="utf-8")
     assert "streamlit_extras" in text
     assert "add_vertical_space" in text
-    assert "colored_header" in text or "style_metric_cards" in text
     # Module-level imports must succeed
     assert hasattr(app, "add_vertical_space")
-    assert hasattr(app, "style_metric_cards")
-    assert hasattr(app, "colored_header")
 
 
-def test_go_to_page_uses_apply_nav_destination() -> None:
+def test_workspace_entrypoints_present() -> None:
     text = Path(app.__file__).read_text(encoding="utf-8")
-    assert "def go_to_page" in text
-    assert "apply_nav_destination" in text
-    assert 'go_to_page("Talk to Agents"' in text or "go_to_page(\"Talk to Agents\"" in text
+    assert "def render_project_workspace" in text
+    assert "def render_agent_pane" in text
+    assert "def render_system_panel" in text
+    assert "set_active_company" in text

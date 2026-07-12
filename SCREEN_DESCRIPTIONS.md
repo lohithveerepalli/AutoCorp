@@ -1,67 +1,62 @@
-# AutoCorp Streamlit UI — Screen Descriptions
+# AutoCorp multi-agent project OS — final layout
 
-Primary entry: `autocorp ui` → Streamlit app at `autocorp/ui/streamlit_app.py` (default http://127.0.0.1:8501).
+Primary entry: `autocorp ui` → Streamlit (`autocorp/ui/streamlit_app.py`) at http://127.0.0.1:8501.
 
-Theme: **dark by default**, toggle persists to `data/ui_theme.json`. Streamlit chrome (menu/footer/toolbar) hidden via custom CSS.
+## 1. Persistent left sidebar (all views)
+- **AutoCorp logo + name** (AC mark, version)
+- **+ New Project** primary button
+- **Projects list** — every company from `SharedBrain.list_projects()`; click opens workspace
+- **Approvals** with live pending count badge `(N)`
+- **Usage & Costs**
+- **Settings**
+- **Dark / Light** theme toggle (persists to `data/ui_theme.json`, dark default)
 
-Agent colors: Brain **#3B82F6** blue · Operator **#22C55E** green · Marketer **#A855F7** purple · Accountant **#F59E0B** amber.
+## 2. No project selected
+- Empty state: “Select or create a project”
+- CTA to open New Project
+- Auto-selects first project when any exist
 
-## Sidebar (all pages)
-- AutoCorp brand mark + version
-- Ordered nav: Dashboard → Launch Company → Companies → **Talk to Agents** → Approvals (badge with pending count) → Usage & Costs → Settings / Models → Help
-- Active company selectbox (workspace context for chat & dashboards)
-- Dark/Light theme toggle (disk-persisted)
+## 3. Project workspace (main surface after clicking a project)
+### Header
+- Project **name**, **status** pill, **budget remaining**, **last activity**
+- Caption: description · domain · GitHub · Vercel
 
-## 1. Dashboard
-- KPI cards: Active companies, Spend, Pending approvals, Est. monthly LLM
-- Live agent status cards (color-coded) with task + loop count; **Chat with {Agent}** opens Talk to Agents for that role
-- Recent activity feed from SharedBrain message bus
-- Company list with Open action
+### Executive team — 2×2 grid
+| | |
+|--|--|
+| **Brain** (blue) chat | **Operator** (green) chat |
+| **Marketer** (purple) chat | **Accountant** (amber) chat |
 
-## 2. Launch Company
-- CEO brief form: name, description, budget slider, stack, tone, cycles
-- Demo auto-approve checkbox
-- Live LLM cost context from current model config
-- Submits to `launch_company` orchestration
+Each pane includes:
+- Color accent + model id (`model_for_agent`)
+- Independent scrollable history (`AgentChatService`, per project + agent)
+- Role-specific quick actions → `send_user_message`
+- Compose + Send with stream callback when LLM supports it
+- Shared SharedBrain project context for all four
 
-## 3. Companies
-- Expandable list of all companies
-- **Company Detail tabs:** Overview | Agents | Messages (agent-to-agent bus) | P&L | Infrastructure | Approvals
-- Overview: stack, tone, GitHub, Vercel, budget progress, set active + chat, run +2 cycles
-- Infrastructure: domains, emails, socials
-- Approvals: per-company pending cards
+### System / Next Actions (below the grid)
+- **What agents are doing** — status + task from `get_agent_statuses`
+- **Needs human approval** — pending irreversible/money items
+- **Recommended next steps** — CEO guidance from domain/deploy/budget/pending state
+- **Pending approvals (this project)** — Approve / Reject inline
 
-## 4. Talk to Agents (primary new experience)
-- Company context bar (name, status, remaining budget, domain)
-- **Left:** agent selector with color, blurb, **current model** powering each agent
-- **Right:** full chat for selected agent
-  - User vs agent bubbles (distinct styles)
-  - Model label on agent messages
-  - **Quick action chips:** Review last code · Show budget · Propose next steps
-  - **Clear chat** (only that company+agent thread)
-  - **Export chat** (markdown download)
-  - Composer with Send; streaming token display when LLM supports stream, else one-shot fallback
-- History persisted in SQLite `data/agent_chats.db` keyed by project_id + agent
+## 4. + New Project
+- CEO brief form (name, description, budget slider, stack, tone, cycles, auto-approve)
+- Launches via existing `launch_company` orchestration
+- Selects new project and returns to workspace
 
-## 5. Approvals
-- Clean cards with risk chips: money amount, irreversible, choice required
-- Option radios for domain choices
-- Approve / Reject wired to SharedBrain + BudgetToolkit
+## 5. Approvals (sidebar destination)
+- Global pending approvals list with Approve / Reject
+- Risk amounts shown
 
 ## 6. Usage & Costs
-- Profile, projected monthly LLM, workspace spend KPIs
-- Per-agent cost bars from cost estimator
-- Light / medium / heavy profile comparison
+- Profile, projected monthly LLM, workspace spend
+- Per-agent cost breakdown bars
 
-## 7. Settings / Models
-- Per-agent model selectors (Claude Sonnet 4.5, Opus, GPT-4o, o1, DeepSeek, OpenRouter, Ollama, …)
-- Cost estimates shown next to each model (in/out per 1M) + API key ready flags
-- Live monthly cost calculator for light/medium/heavy
-- Budget alerts, default company budget, human-approval toggle
-- Saves via `save_user_config`
+## 7. Settings
+- Per-agent model selectors with $/1M + API key status
+- Monthly cost estimates (light/medium/heavy)
+- Budget alerts + human-approval toggle · Save
 
-## 8. Help
-- Getting started steps, CLI snippets, agent color legend
-
-## Legacy
-- FastAPI HTML SPA remains at `autocorp ui --legacy-fastapi` (optional); Streamlit is the accepted CEO UI for this goal.
+## Backend
+Unchanged: LangGraph agents, SharedBrain, AgentChatService, CLI launch.

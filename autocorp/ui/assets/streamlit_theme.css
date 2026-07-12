@@ -156,4 +156,48 @@ h1, h2, h3 {
   100% { background-position: -200% 0; }
 }
 
+.ac-project-header {
+  padding: 0.35rem 0 0.75rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ac-border, rgba(148,163,184,0.12));
+}
+.ac-status-pill {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #34D399;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ac-agent-pane {
+  border: 1px solid var(--ac-border, rgba(148,163,184,0.12));
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem 0.5rem;
+  margin-bottom: 0.45rem;
+  background: var(--ac-bg-card, #0F172A);
+  box-shadow: var(--ac-shadow, 0 8px 30px rgba(0,0,0,0.25));
+}
+.ac-pane-model {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  color: var(--ac-text-muted, #94A3B8);
+  margin-top: 0.25rem;
+}
+.ac-pane-blurb {
+  font-size: 0.78rem;
+  color: var(--ac-text-muted, #94A3B8);
+  margin-top: 0.15rem;
+  margin-bottom: 0.25rem;
+}
+.ac-sys-row {
+  padding: 0.45rem 0.65rem;
+  margin-bottom: 0.35rem;
+  border-radius: 8px;
+  background: var(--ac-bg-elevated, #0C1220);
+  border: 1px solid var(--ac-border, rgba(148,163,184,0.1));
+}
+
 div[data-testid="stSidebarNav"] { display: none; }

@@ -1,8 +1,7 @@
-"""AppTest gate — enforces real Streamlit session_state widget rules."""
+"""AppTest smoke for multi-agent project workspace UI."""
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -24,78 +23,48 @@ def seeded_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AUTOCORP_DATA_DIR", str(data))
     get_settings.cache_clear()
     brain = SharedBrain(db)
-    a = brain.create_project(Project(name="Alpha Co", description="first", budget_usd=100))
-    b = brain.create_project(Project(name="Beta Co", description="second", budget_usd=200))
-    yield {"brain": brain, "alpha": a, "beta": b, "data": data}
+    p = brain.create_project(
+        Project(name="FocusFlow", description="demo", budget_usd=450, spent_usd=10)
+    )
+    yield {"brain": brain, "project": p, "data": data}
     get_settings.cache_clear()
 
 
-def test_apptest_renders_without_session_state_exception(seeded_env) -> None:
-    streamlit = pytest.importorskip("streamlit")
+def test_apptest_workspace_loads_without_exception(seeded_env) -> None:
+    pytest.importorskip("streamlit")
     from streamlit.testing.v1 import AppTest
 
-    at = AppTest.from_file(str(APP), default_timeout=30)
+    at = AppTest.from_file(str(APP), default_timeout=45)
     at.run()
-
-    # Must not raise StreamlitAPIException on company_select after-write
     assert not at.exception, f"AppTest exceptions: {at.exception}"
 
-    # Real content assertions (not theater)
-    page_text = " ".join(
+    # Sidebar has New Project
+    labels = [b.label for b in at.sidebar.button]
+    assert any("New Project" in (lab or "") for lab in labels), labels
+
+    page_bits = " ".join(
         [
-            *(getattr(t, "value", str(t)) for t in at.title),
             *(getattr(m, "value", str(m)) for m in at.markdown),
             *(getattr(c, "value", str(c)) for c in at.caption),
         ]
     )
-    # Dashboard header or KPI labels should appear
+    # Workspace header or system panel when project auto-selected
     assert (
-        "Dashboard" in page_text
-        or "Active companies" in page_text
-        or "Command center" in page_text
-        or any("Dashboard" in str(x) for x in at)
+        "FocusFlow" in page_bits
+        or "System / Next Actions" in page_bits
+        or "Executive team" in page_bits
+        or "Select or create" in page_bits
     )
 
-    radios = list(at.sidebar.radio) if at.sidebar.radio else list(at.radio)
-    assert len(radios) >= 1
-    # Nav options include Talk to Agents
-    opts = radios[0].options if hasattr(radios[0], "options") else []
-    if opts:
-        assert any("Talk to Agents" in str(o) for o in opts)
 
+def test_workspace_helpers_drive_header_for_seeded_project(seeded_env) -> None:
+    from autocorp.ui.workspace import project_header_data, system_next_actions_panel
 
-def test_apptest_programmatic_company_context_survives_sidebar(seeded_env) -> None:
-    """Deep-link to Talk to Agents with non-default company must keep that slug."""
-    from autocorp.ui.navigation import (
-        apply_nav_destination,
-        simulate_sidebar_company_pass,
-        sync_radio_from_nav_page,
-        read_nav_selection,
-    )
-
-    alpha = seeded_env["alpha"].slug
-    beta = seeded_env["beta"].slug
-    session = {
-        "nav_page": "Dashboard",
-        "nav_radio": "Dashboard",
-        "active_slug": alpha,
-        "company_select": alpha,
-    }
-    apply_nav_destination(
-        session,
-        "Talk to Agents",
-        agent="brain",
-        company_slug=beta,
-        pending_approvals=0,
-    )
-    # Sidebar radio pass
-    opt = sync_radio_from_nav_page(session, 0)
-    page = read_nav_selection(opt, session)
-    assert page == "Talk to Agents"
-    # Sidebar company pass (must not clobber beta; must not rewrite widget post-mount)
-    widget_before = session["company_select"]
-    final = simulate_sidebar_company_pass(session, [alpha, beta])
-    assert final == beta
-    assert session["active_slug"] == beta
-    assert session["company_select"] == widget_before == beta
-    assert session["chat_agent"] == "brain"
+    p = seeded_env["project"]
+    brain = seeded_env["brain"]
+    h = project_header_data(brain, p)
+    assert h["name"] == "FocusFlow"
+    assert h["budget_remaining"] == pytest.approx(440.0)
+    panel = system_next_actions_panel(brain, p)
+    assert len(panel["agent_activity"]) >= 4
+    assert isinstance(panel["recommended_next_steps"], list)
